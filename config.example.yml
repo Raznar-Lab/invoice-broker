@@ -1,0 +1,15 @@
+web:
+	enable_proxy: false
+  proxy_header: ["X-Forwarded-For"]
+  trusted_proxy: ["127.0.0.1"]
+  bind: "0.0.0.0"
+  port: "8080"
+gateway:
+  xendit:
+  	label: "xendit"
+    webhook_tokens: ["YOUR_GATEWAY_WEBHOOK_TOKEN"]
+    callback_urls: ["YOUR_WEB_CALLBACK_URL"]
+  paypal:
+  	label: "paypal"
+    webhook_tokens: ["YOUR_GATEWAY_WEBHOOK_TOKEN"]
+    callback_urls: ["YOUR_WEB_CALLBACK_URL"]
