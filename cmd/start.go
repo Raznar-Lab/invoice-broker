@@ -1,14 +1,32 @@
 /*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
+Copyright © 2024 Raznar Lab <xabhista19@raznar.id>
 */
 package cmd
 
 import (
-	"fmt"
+	"log"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"raznar.id/invoice-broker/config"
+	"raznar.id/invoice-broker/internal/rest"
 )
+
+func startServer(configFile string) {
+	if !strings.HasSuffix(configFile, ".yml") {
+		log.Fatalf("The config file must be yml! instead of %s", configFile)
+	}
+
+	conf, err := config.New(configFile)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	// fiber has built-in block, so we dont need any signal block
+	if err = rest.Start(conf); err != nil {
+		log.Fatalf("An error occured when starting the bot: %s", err.Error())
+	}
+}
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -21,12 +39,13 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
+		configFile := cmd.Flag("config").Value.String()
+		startServer(configFile)
 	},
 }
 
 func init() {
-	startCmd.Flags().String("config", "config.yml", "the configuration file")
+	startCmd.Flags().String("config", "config.yml", "Configuration file")
 	rootCmd.AddCommand(startCmd)
 
 	// Here you will define your flags and configuration settings.
