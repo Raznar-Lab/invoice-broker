@@ -11,7 +11,7 @@ type Config struct {
 	filepath      string
 	Web           WebConfig           `yaml:"web" validate:"required"`
 	Gateway       GatewayConfig       `yaml:"gateway" validate:"required"`
-	MessageBroker MessageBrokerConfig `yaml:"message_broker" validate:"required"`
+	// MessageBroker MessageBrokerConfig `yaml:"message_broker" validate:"required"`
 }
 
 var validate = validator.New()
