@@ -19,10 +19,10 @@ func Start(conf *config.Config) (err error) {
 
 	fiberConf.ProxyHeader = conf.Web.ProxyHeader
 	app := fiber.New(fiberConf)
-	initRoutes(app, conf)
-
 	// middleware
 	app.Use(logger.New())
+
+	initRoutes(app, conf)
 
 	return app.Listen(fmt.Sprintf("%s:%s", conf.Web.Bind, conf.Web.Port))
 }
