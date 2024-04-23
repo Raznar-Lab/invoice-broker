@@ -13,7 +13,7 @@ type XenditHeader struct {
 
 func ProcessXendit(payment config.PaymentConfig, header XenditHeader) (statusCode int) {
 	statusCode = 200
-	if slices.Contains(payment.WebhookTokens, header.CallbackToken) {
+	if !slices.Contains(payment.WebhookTokens, header.CallbackToken) {
 		statusCode = 401
 		return
 	}
