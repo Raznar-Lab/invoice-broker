@@ -6,9 +6,13 @@ import (
 	"net/http"
 )
 
-func ForwardWebhookData(body []byte, urlList []string) {
+func ForwardWebhookData(body []byte, urlList []string, header string, token string) {
 	for _, url := range urlList {
-		_, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set(header, token)
+
+		_, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Printf("[WARNING] an error occured when forwarding webhook on http: %s", err.Error())
 		}
