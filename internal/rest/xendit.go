@@ -15,9 +15,9 @@ func initXendit(app *fiber.App, conf config.PaymentConfig) {
 			WebhookID:     c.Get("webhook-id"),
 		}
 
-		code := invoice.ProcessXendit(conf, xenHeader)
+		code := invoice.IsCBValid(conf, xenHeader)
 		if code == fiber.StatusOK {
-			invoice.ForwardWebhookData(c.Body(), conf.CallbackURLs, "x-callback-token", xenHeader.CallbackToken)
+			go invoice.ForwardWebhookData(c.Body(), conf.CallbackURLs, "x-callback-token", xenHeader.CallbackToken)
 		}
 
 		return c.SendStatus(code)

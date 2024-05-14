@@ -11,7 +11,7 @@ type XenditHeader struct {
 	WebhookID     string `json:"webhook_id"`
 }
 
-func ProcessXendit(payment config.PaymentConfig, header XenditHeader) (statusCode int) {
+func IsCBValid(payment config.PaymentConfig, header XenditHeader) (statusCode int) {
 	statusCode = 200
 	if !slices.Contains(payment.WebhookTokens, header.CallbackToken) {
 		statusCode = 401
