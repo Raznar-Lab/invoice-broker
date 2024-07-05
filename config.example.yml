@@ -8,12 +8,18 @@ web:
 gateway:
   xendit:
     label: xendit
+    api_key: YOUR_GATEWAY_API_KEY
+    admin_token: []
+    admin_ip: []
     webhook_tokens:
       - 'YOUR_WEBHOOK_TOKEN'
     callback_urls:
       - 'YOUR_CALLBACK_URL'
   paypal:
     label: paypal
+    api_key: YOUR_GATEWAY_API_KEY
+    admin_token: []
+    admin_ip: []
     webhook_tokens:
       - 'YOUR_WEBHOOK_TOKEN'
     callback_urls:

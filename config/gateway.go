@@ -6,6 +6,9 @@ type GatewayConfig struct {
 }
 
 type PaymentConfig struct {
+	APIKey        string   `yaml:"api_key"`
+	AdminToken    []string `yaml:"admin_token"`
+	AdminIP       []string `yaml:"admin_ip"`
 	Label         string   `yaml:"label"`
 	WebhookTokens []string `yaml:"webhook_tokens"`
 

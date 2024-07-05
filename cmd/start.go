@@ -4,9 +4,12 @@ Copyright © 2024 Raznar Lab <xabhista19@raznar.id>
 package cmd
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"strings"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 	"raznar.id/invoice-broker/config"
 	"raznar.id/invoice-broker/internal/rest"
@@ -22,8 +25,23 @@ func startServer(configFile string) {
 		log.Fatalf(err.Error())
 	}
 
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     conf.Redis.Host + ":" + conf.Redis.Port,
+		Password: conf.Redis.Password,
+		DB:       conf.Redis.DB,
+	})
+
+	ctx := context.Background()
+	err = rdb.Ping(ctx).Err()
+
+	if err != nil {
+		panic(err)
+	} else {
+		fmt.Println("Successfully connected to redis database.")
+	}
+
 	// fiber has built-in block, so we dont need any signal block
-	if err = rest.Start(conf); err != nil {
+	if err = rest.Start(conf, rdb); err != nil {
 		log.Fatalf("An error occured when starting the bot: %s", err.Error())
 	}
 }

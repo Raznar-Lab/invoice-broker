@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	filepath      string
-	Web           WebConfig           `yaml:"web" validate:"required"`
-	Gateway       GatewayConfig       `yaml:"gateway" validate:"required"`
+	filepath string
+	Web      WebConfig     `yaml:"web" validate:"required"`
+	Gateway  GatewayConfig `yaml:"gateway" validate:"required"`
+	Redis    RedisConfig   `yaml:"redis" validate:"required"`
 	// MessageBroker MessageBrokerConfig `yaml:"message_broker" validate:"required"`
 }
 
