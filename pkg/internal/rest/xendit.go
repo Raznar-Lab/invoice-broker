@@ -2,18 +2,19 @@ package rest
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/redis/go-redis/v9"
 	"github.com/xendit/xendit-go/v5"
 	xenInvoice "github.com/xendit/xendit-go/v5/invoice"
-	"raznar.id/invoice-broker/config"
-	"raznar.id/invoice-broker/internal/invoice"
+	"raznar.id/invoice-broker/configs"
+	"raznar.id/invoice-broker/pkg/internal/database"
+	"raznar.id/invoice-broker/pkg/internal/database/models"
+	"raznar.id/invoice-broker/pkg/internal/invoice"
 )
 
 type XenditNewRequest struct {
@@ -24,7 +25,7 @@ type XenditNewRequest struct {
 	InvoiceDuration int64 `json:"invoice_duration"`
 }
 
-func initXendit(app *fiber.App, conf config.PaymentConfig, rdb *redis.Client) {
+func initXendit(app *fiber.App, conf configs.PaymentConfig, webConfig configs.WebConfig, db *database.Database) {
 	xenClient := xendit.NewClient(conf.APIKey)
 	app.Post(fmt.Sprintf("/gateway/%s/invoice", conf.Label), func(c *fiber.Ctx) (err error) {
 		xenHeader := invoice.XenditHeader{
@@ -44,30 +45,32 @@ func initXendit(app *fiber.App, conf config.PaymentConfig, rdb *redis.Client) {
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
 
-		go func() {
-			if invoiceData != nil {
-				cmd := rdb.Set(context.Background(), fmt.Sprintf("%s:%s", conf.Label, invoiceData.GetId()), invoiceData.GetStatus().String(), time.Until(time.Now().Add(time.Hour*24)))
-				cmdErr := cmd.Err()
-				if cmdErr != nil {
-					fmt.Printf("An error occured while trying to update a transaction with id %s on redis: %s", invoiceData.GetId(), cmdErr.Error())
-				}
-			} else {
-				fmt.Println("invoice data null")
-			}
+		fmt.Println(invoiceData.GetId())
+		model := db.Get(invoiceData.GetId())
+		if model == nil {
+			fmt.Println(model)
+			return c.SendStatus(fiber.StatusNotFound)
+		}
 
-			invoice.ForwardWebhookData(body, conf.CallbackURLs, "x-callback-token", xenHeader.CallbackToken)
+		go func() {
+			invoice.ForwardWebhookData(body, webConfig.GetAPIConfig(model.Organization).CallbackURLS, "x-callback-token", xenHeader.CallbackToken)
+			model.Status = invoiceData.GetStatus().String()
+			db.Save()
 		}()
+
+
 		return c.SendStatus(code)
 	})
 
 	app.Post(fmt.Sprintf("/gateway/%s/invoice/new", conf.Label), func(c *fiber.Ctx) (err error) {
-		adminTokenHeader := strings.Split(c.Get("Authorization"), "Bearer ")
-		if len(adminTokenHeader) < 2 {
+		apiTokenHeader := strings.Split(c.Get("Authorization"), "Bearer ")
+		if len(apiTokenHeader) < 2 {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		adminToken := adminTokenHeader[1]
-		if !slices.Contains(conf.AdminToken, adminToken) || !slices.Contains(conf.AdminIP, c.IP()) {
+		apiToken := apiTokenHeader[1]
+		apiData := getApiData(apiToken, c.IP(), webConfig.APIConfigs)
+		if apiData == nil {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
@@ -104,6 +107,46 @@ func initXendit(app *fiber.App, conf config.PaymentConfig, rdb *redis.Client) {
 			return c.SendStatus(fiber.StatusBadGateway)
 		}
 
+		err = db.Add(&models.TransactionModel{
+			Organization:  apiData.Organization,
+			TransactionID: *transaction.Id,
+			Amount:        amount,
+			CreatedAt:     time.Now().Format(time.RFC3339),
+			Gateway:       conf.Label,
+			Status:        transaction.GetStatus().String(),
+		})
+
+		if err != nil {
+			fmt.Printf("An error occured when saving invoice data from %s: %s", c.IP(), xenerr.Error())
+			return c.SendStatus(fiber.StatusBadGateway)
+		}
+
 		return c.Status(fiber.StatusCreated).SendString(transaction.InvoiceUrl)
+	})
+
+	app.Get(fmt.Sprintf("/gateway/%s/invoice/data", conf.Label), func(c *fiber.Ctx) (err error) {
+		apiTokenHeader := strings.Split(c.Get("Authorization"), "Bearer ")
+		if len(apiTokenHeader) < 2 {
+			return c.SendStatus(fiber.StatusUnauthorized)
+		}
+
+		apiToken := apiTokenHeader[1]
+		apiData := getApiData(apiToken, c.IP(), webConfig.APIConfigs)
+		if apiData == nil {
+			return c.SendStatus(fiber.StatusUnauthorized)
+		}
+
+		transactionId := c.Query("id")
+		model := db.Get(transactionId)
+		if model == nil {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+
+		res, err := json.Marshal(&model)
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadGateway)
+		}
+
+		return c.Status(fiber.StatusOK).Send(res)
 	})
 }

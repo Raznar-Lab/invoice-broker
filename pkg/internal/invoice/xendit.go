@@ -3,7 +3,7 @@ package invoice
 import (
 	"slices"
 
-	"raznar.id/invoice-broker/config"
+	"raznar.id/invoice-broker/configs"
 )
 
 type XenditHeader struct {
@@ -11,7 +11,7 @@ type XenditHeader struct {
 	WebhookID     string `json:"webhook_id"`
 }
 
-func IsCBValid(payment config.PaymentConfig, header XenditHeader) (statusCode int) {
+func IsCBValid(payment configs.PaymentConfig, header XenditHeader) (statusCode int) {
 	statusCode = 200
 	if !slices.Contains(payment.WebhookTokens, header.CallbackToken) {
 		statusCode = 401
