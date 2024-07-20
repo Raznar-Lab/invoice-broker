@@ -9,35 +9,15 @@ import (
 	"raznar.id/invoice-broker/pkg/internal/database/models"
 )
 
+type databaseData struct {
+	Shortener    []*models.ShortenerModel   `json:"shortener"`
+	Transactions []*models.TransactionModel `json:"transactions"`
+}
+
 type Database struct {
-	filePath     string
-	transactions []*models.TransactionModel
-	m sync.Mutex 
-}
-
-func (d *Database) Get(transactionId string) (transaction *models.TransactionModel) {
-	d.m.Lock()
-	defer d.m.Unlock()
-	for _, t := range d.transactions {
-		if t.TransactionID == transactionId {
-			transaction = t
-			return
-		}
-	}
-
-	return
-}
-
-func (d *Database) Add(transaction *models.TransactionModel) (err error) {
-	d.m.Lock()
-	defer d.m.Unlock()
-	if d.Get(transaction.TransactionID) != nil {
-		return
-	}
-
-	fmt.Printf("added %s\n", transaction.TransactionID)
-	d.transactions = append(d.transactions, transaction)
-	return d.Save()
+	filePath string
+	tc       transactionContainer
+	sc       shortenerContainer
 }
 
 func (d *Database) Load() (err error) {
@@ -55,19 +35,39 @@ func (d *Database) Load() (err error) {
 		return
 	}
 
-	return json.Unmarshal(res, &d.transactions)
-}
-
-func (d *Database) Save() (err error) {
-	res, err := json.Marshal(d.transactions)
+	var data databaseData
+	err = json.Unmarshal(res, &data)
 	if err != nil {
 		return
 	}
 
-	fmt.Printf("saved with %d data(s)\n", len(d.transactions))
+	d.sc.models = data.Shortener
+	d.tc.models = data.Transactions
+	return
+}
+
+func (d *Database) Save() (err error) {
+	res, err := json.Marshal(databaseData{
+		Shortener:    d.sc.models,
+		Transactions: d.tc.models,
+	})
+	if err != nil {
+		return
+	}
+
 	return os.WriteFile(d.filePath, res, 0644)
 }
 
+// save in routine so the web can proceed faster.
+func (d *Database) SilentSave()  {
+	go func() {
+		err := d.Save()
+		if err != nil {
+			fmt.Println("an error occured while saving the database: " + err.Error())
+		}
+	}()
+}
+
 func New(filePath string) *Database {
-	return &Database{filePath: filePath, transactions: []*models.TransactionModel{}}
+	return &Database{filePath: filePath, tc: transactionContainer{m: sync.Mutex{}, models: []*models.TransactionModel{}}, sc: shortenerContainer{m: sync.Mutex{}, models: []*models.ShortenerModel{}}}
 }

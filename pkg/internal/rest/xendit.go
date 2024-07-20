@@ -3,12 +3,12 @@ package rest
 import (
 	"context"
 	"encoding/json"
-	"time"
-
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/xendit/xendit-go/v5"
 	xenInvoice "github.com/xendit/xendit-go/v5/invoice"
 	"raznar.id/invoice-broker/configs"
@@ -17,136 +17,156 @@ import (
 	"raznar.id/invoice-broker/pkg/internal/invoice"
 )
 
-type XenditNewRequest struct {
-	ID          string  `json:"id"`
-	Description string  `json:"description"`
-	Amount      float64 `json:"amount"`
-	// the format is in seconds
-	InvoiceDuration int64 `json:"invoice_duration"`
+type XenditInvoiceRequest struct {
+	ID              string  `json:"id"`
+	Description     string  `json:"description"`
+	Amount          float64 `json:"amount"`
+	InvoiceDuration int64   `json:"invoice_duration"`
+}
+
+type XenditInvoiceResponse struct {
+	TransactionID string `json:"transaction_id"`
+	Link          string `json:"link"`
+	ShortLink     string `json:"short_link"`
 }
 
 func initXendit(app *fiber.App, conf configs.PaymentConfig, webConfig configs.WebConfig, db *database.Database) {
-	xenClient := xendit.NewClient(conf.APIKey)
-	app.Post(fmt.Sprintf("/gateway/%s/invoice", conf.Label), func(c *fiber.Ctx) (err error) {
-		xenHeader := invoice.XenditHeader{
+	xenditClient := xendit.NewClient(conf.APIKey)
+
+	app.Post(fmt.Sprintf("/gateway/%s/invoice", conf.Label), func(c *fiber.Ctx) error {
+		xenditHeader := invoice.XenditHeader{
 			CallbackToken: c.Get("x-callback-token"),
 			WebhookID:     c.Get("webhook-id"),
 		}
 
-		code := invoice.IsCBValid(conf, xenHeader)
-		if code != fiber.StatusOK {
+		if !invoice.IsCBValid(conf, xenditHeader) {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		var invoiceData *xenInvoice.Invoice
-		body := c.Body()
-		err = c.BodyParser(&invoiceData)
-		if err != nil {
+		var invoiceData xenInvoice.Invoice
+		if err := c.BodyParser(&invoiceData); err != nil {
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
 
-		fmt.Println(invoiceData.GetId())
-		model := db.Get(invoiceData.GetId())
-		if model == nil {
-			fmt.Println(model)
+		transaction := db.GetTransaction(invoiceData.GetId())
+		if transaction == nil {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 
+		transaction.Status = invoiceData.GetStatus().String()
+		db.SilentSave()
+
+		body := c.Body()
 		go func() {
-			invoice.ForwardWebhookData(body, webConfig.GetAPIConfig(model.Organization).CallbackURLS, "x-callback-token", xenHeader.CallbackToken)
-			model.Status = invoiceData.GetStatus().String()
-			db.Save()
+			apiConf := webConfig.GetAPIConfig(transaction.Organization)
+			if(apiConf == nil) {
+				fmt.Printf("An error occured when forwarding webhook data, api conf with organization %s is null\n", transaction.Organization)
+				return
+			}
+
+			
+			invoice.ForwardWebhookData(body, apiConf.CallbackURLS, "x-callback-token", apiConf.Token)
 		}()
 
-
-		return c.SendStatus(code)
+		return c.SendStatus(fiber.StatusOK)
 	})
 
-	app.Post(fmt.Sprintf("/gateway/%s/invoice/new", conf.Label), func(c *fiber.Ctx) (err error) {
-		apiTokenHeader := strings.Split(c.Get("Authorization"), "Bearer ")
-		if len(apiTokenHeader) < 2 {
+	app.Post(fmt.Sprintf("/gateway/%s/invoice/new", conf.Label), func(c *fiber.Ctx) error {
+		authHeader := c.Get("Authorization")
+		tokenParts := strings.Split(authHeader, "Bearer ")
+		if len(tokenParts) < 2 {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		apiToken := apiTokenHeader[1]
+		apiToken := tokenParts[1]
 		apiData := getApiData(apiToken, c.IP(), webConfig.APIConfigs)
 		if apiData == nil {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		var res XenditNewRequest
-		err = c.BodyParser(&res)
-		if err != nil {
-			fmt.Printf("An error occured when parsing a request data from %s: %s", c.IP(), err.Error())
+		var req XenditInvoiceRequest
+		if err := c.BodyParser(&req); err != nil {
 			return c.SendStatus(fiber.StatusBadGateway)
 		}
 
-		amount := res.Amount
-		feeAmount := (res.Amount * 0.01)
+		feeAmount := req.Amount * 0.01
+		invoiceDuration := fmt.Sprintf("%d", req.InvoiceDuration)
 
-		invDuration := fmt.Sprintf("%d", res.InvoiceDuration)
-		req := xenClient.InvoiceApi.CreateInvoice(context.Background()).CreateInvoiceRequest(xenInvoice.CreateInvoiceRequest{
-			ExternalId:  fmt.Sprintf("RAZNAR - B#%s", res.ID),
-			Amount:      amount + feeAmount,
-			Description: &res.Description,
+		invoiceRequest := xenditClient.InvoiceApi.CreateInvoice(context.Background()).CreateInvoiceRequest(xenInvoice.CreateInvoiceRequest{
+			ExternalId:  fmt.Sprintf("RAZNAR - B#%s", req.ID),
+			Amount:      req.Amount + feeAmount,
+			Description: &req.Description,
 			Fees: []xenInvoice.InvoiceFee{
-				{
-					Type:  "QR Fee",
-					Value: float32(feeAmount),
-				},
+				{Type: "QR Fee", Value: float32(feeAmount)},
 			},
-			InvoiceDuration: &invDuration,
-			PaymentMethods: []string{
-				"QRIS",
-			},
+			InvoiceDuration: &invoiceDuration,
+			PaymentMethods:  []string{"QRIS"},
 		})
 
-		transaction, _, xenerr := req.Execute()
-		if xenerr != nil {
-			fmt.Printf("An error occured when creating an invoice link from %s: %s", c.IP(), xenerr.Error())
+		transaction, _, xenditError := invoiceRequest.Execute()
+		if xenditError != nil {
 			return c.SendStatus(fiber.StatusBadGateway)
 		}
 
-		err = db.Add(&models.TransactionModel{
+		err := db.AddTransaction(&models.TransactionModel{
 			Organization:  apiData.Organization,
 			TransactionID: *transaction.Id,
-			Amount:        amount,
+			Amount:        req.Amount,
 			CreatedAt:     time.Now().Format(time.RFC3339),
 			Gateway:       conf.Label,
 			Status:        transaction.GetStatus().String(),
 		})
-
 		if err != nil {
-			fmt.Printf("An error occured when saving invoice data from %s: %s", c.IP(), xenerr.Error())
 			return c.SendStatus(fiber.StatusBadGateway)
 		}
 
-		return c.Status(fiber.StatusCreated).SendString(transaction.InvoiceUrl)
+		shortLinkID := uuid.NewString()[0:5]
+		err = db.AddShortener(&models.ShortenerModel{
+			ID:   shortLinkID,
+			Link: transaction.InvoiceUrl,
+		})
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadGateway)
+		}
+		
+		responseData := XenditInvoiceResponse{
+			TransactionID: transaction.GetId(),
+			Link:          transaction.InvoiceUrl,
+			ShortLink:     fmt.Sprintf("https://%s/%s", c.Get("host"), shortLinkID),
+		}
+
+		responseJSON, err := json.Marshal(responseData)
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadGateway)
+		}
+
+		return c.Status(fiber.StatusCreated).Send(responseJSON)
 	})
 
-	app.Get(fmt.Sprintf("/gateway/%s/invoice/data", conf.Label), func(c *fiber.Ctx) (err error) {
-		apiTokenHeader := strings.Split(c.Get("Authorization"), "Bearer ")
-		if len(apiTokenHeader) < 2 {
+	app.Get(fmt.Sprintf("/gateway/%s/invoice/data", conf.Label), func(c *fiber.Ctx) error {
+		authHeader := c.Get("Authorization")
+		tokenParts := strings.Split(authHeader, "Bearer ")
+		if len(tokenParts) < 2 {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		apiToken := apiTokenHeader[1]
+		apiToken := tokenParts[1]
 		apiData := getApiData(apiToken, c.IP(), webConfig.APIConfigs)
 		if apiData == nil {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		transactionId := c.Query("id")
-		model := db.Get(transactionId)
-		if model == nil {
+		transactionID := c.Query("id")
+		transaction := db.GetTransaction(transactionID)
+		if transaction == nil {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 
-		res, err := json.Marshal(&model)
+		responseJSON, err := json.Marshal(transaction)
 		if err != nil {
 			return c.SendStatus(fiber.StatusBadGateway)
 		}
 
-		return c.Status(fiber.StatusOK).Send(res)
+		return c.Status(fiber.StatusOK).Send(responseJSON)
 	})
 }

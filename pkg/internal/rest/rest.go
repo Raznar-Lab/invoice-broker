@@ -10,7 +10,7 @@ import (
 	"raznar.id/invoice-broker/pkg/internal/database"
 )
 
-func Start(conf *configs.Config, db *database.Database) (err error) {
+func Start(conf *configs.Config, db *database.Database) error {
 	fiberConf := fiber.Config{
 		TrustedProxies: conf.Web.TrustedProxy,
 	}
@@ -21,7 +21,7 @@ func Start(conf *configs.Config, db *database.Database) (err error) {
 
 	fiberConf.ProxyHeader = conf.Web.ProxyHeader
 	app := fiber.New(fiberConf)
-	// middleware
+	// Middleware
 	app.Use(logger.New())
 
 	initRoutes(app, conf, db)
@@ -30,6 +30,7 @@ func Start(conf *configs.Config, db *database.Database) (err error) {
 }
 
 func initRoutes(app *fiber.App, conf *configs.Config, db *database.Database) {
+	initShortener(app, db)
 	initXendit(app, conf.Gateway.Xendit, conf.Web, db)
 }
 
@@ -42,8 +43,6 @@ func getApiData(apiToken string, ip string, apiConfigs []configs.APIConfig) *con
 		if len(apiConfig.AllowedIPs) == 0 || slices.Contains(apiConfig.AllowedIPs, ip) {
 			return &apiConfig
 		}
-
 	}
-
 	return nil
 }
