@@ -1,26 +1,29 @@
+data_path: "./data.json"
 web:
   enable_proxy: true
   proxy_header: X-Forwarded-For
   trusted_proxy:
     - 127.0.0.1
   bind: 0.0.0.0
-  port: '8080'
+  port: "8080"
 gateway:
   xendit:
     label: xendit
-    api_key: YOUR_GATEWAY_API_KEY
-    admin_token: []
-    admin_ip: []
-    webhook_tokens:
-      - 'YOUR_WEBHOOK_TOKEN'
-    callback_urls:
-      - 'YOUR_CALLBACK_URL'
+    api_key: "example_xendit_api_key"
+    callback_tokens: ["token1", "token2"]
   paypal:
     label: paypal
-    api_key: YOUR_GATEWAY_API_KEY
-    admin_token: []
-    admin_ip: []
+    api_key: "example_paypal_api_key"
+    admin_token: ["admin123"]
+    admin_ip: ["192.168.1.100", "192.168.1.101"]
     webhook_tokens:
-      - 'YOUR_WEBHOOK_TOKEN'
+      - "example_webhook_token"
     callback_urls:
-      - 'YOUR_CALLBACK_URL'
+      - "https://example.com/callback"
+api_configs:
+  - organization: "Raznar"
+    token: "example_raznar_token"
+    allowed_ips:
+      - "192.168.1.0/24"
+    callback_urls:
+      - "https://example.com/api/callback"
