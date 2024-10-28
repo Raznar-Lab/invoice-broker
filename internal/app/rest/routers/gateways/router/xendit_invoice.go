@@ -29,6 +29,15 @@ type xenditInvoiceCreateResponse struct {
 	ShortLink     string `json:"short_link"`
 }
 
+type xenditInvoiceGetResponse struct {
+	Id            string  `json:"id"`
+	TransactionID string  `json:"transaction_id"`
+	Amount        float64 `json:"amount"`
+	Gateway       string  `json:"gateway"`
+	Status        string  `json:"status"`
+	CreatedAt     string  `json:"created_at"`
+}
+
 func (r XenditGatewayRouter) InvoiceCreateHandler(c *fiber.Ctx) (err error) {
 	authHeader := c.Get("Authorization")
 	tokenParts := strings.Split(authHeader, "Bearer ")
@@ -145,7 +154,14 @@ func (r XenditGatewayRouter) InvoiceGetHandler(c *fiber.Ctx) (err error) {
 		return c.SendStatus(fiber.StatusNotFound)
 	}
 
-	responseJSON, err := json.Marshal(transaction)
+	responseJSON, err := json.Marshal(xenditInvoiceGetResponse{
+		Id:            transaction.Id,
+		TransactionID: transaction.TransactionID,
+		Amount:        transaction.Amount,
+		Gateway:       transaction.Gateway,
+		Status:        transaction.Status,
+		CreatedAt:     transaction.CreatedAt,
+	})
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
