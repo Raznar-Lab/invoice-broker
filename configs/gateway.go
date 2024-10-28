@@ -8,5 +8,5 @@ type GatewayConfig struct {
 type PaymentConfig struct {
 	APIKey        string   `yaml:"api_key"`
 	Label         string   `yaml:"label"`
-	WebhookTokens []string `yaml:"webhook_tokens"`
+	CallbackTokens []string `yaml:"callback_tokens"`
 }

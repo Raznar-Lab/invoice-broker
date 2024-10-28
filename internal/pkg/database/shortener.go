@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"raznar.id/invoice-broker/pkg/internal/database/models"
+	"raznar.id/invoice-broker/internal/models"
 )
 
 type shortenerContainer struct {
@@ -35,6 +35,6 @@ func (d *Database) AddShortener(model *models.ShortenerModel) (err error) {
 	defer d.sc.m.Unlock()
 	d.sc.models = append(d.sc.models, model)
 
-	d.SilentSave()
+	err = d.Save()
 	return
 }

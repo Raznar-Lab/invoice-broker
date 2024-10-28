@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"raznar.id/invoice-broker/pkg/internal/database/models"
+	"raznar.id/invoice-broker/internal/models"
 )
 
 type databaseData struct {

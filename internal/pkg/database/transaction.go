@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"raznar.id/invoice-broker/pkg/internal/database/models"
+	"raznar.id/invoice-broker/internal/models"
 )
 
 type transactionContainer struct {
@@ -12,11 +12,24 @@ type transactionContainer struct {
 	models []*models.TransactionModel
 }
 
-func (d *Database) GetTransaction(transactionId string) (transaction *models.TransactionModel) {
+func (d *Database) GetTransactionByTrID(trId string) (transaction *models.TransactionModel) {
 	d.tc.m.Lock()
 	defer d.tc.m.Unlock()
 	for _, t := range d.tc.models {
-		if t.TransactionID == transactionId {
+		if t.TransactionID == trId {
+			transaction = t
+			return
+		}
+	}
+
+	return
+}
+
+func (d *Database) GetTransaction(invoiceId string) (transaction *models.TransactionModel) {
+	d.tc.m.Lock()
+	defer d.tc.m.Unlock()
+	for _, t := range d.tc.models {
+		if t.Id == invoiceId {
 			transaction = t
 			return
 		}
@@ -26,7 +39,7 @@ func (d *Database) GetTransaction(transactionId string) (transaction *models.Tra
 }
 
 func (d *Database) AddTransaction(transaction *models.TransactionModel) (err error) {
-	if d.GetTransaction(transaction.TransactionID) != nil {
+	if d.GetTransactionByTrID(transaction.TransactionID) != nil {
 		err = errors.New("short url with that id is already exists")
 		return
 	}
@@ -36,6 +49,6 @@ func (d *Database) AddTransaction(transaction *models.TransactionModel) (err err
 
 	d.tc.models = append(d.tc.models, transaction)
 
-	d.SilentSave()
+	err = d.Save()
 	return
 }

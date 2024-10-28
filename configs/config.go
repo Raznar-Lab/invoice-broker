@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	filepath string
-	Web      WebConfig     `yaml:"web" validate:"required"`
-	Gateway  GatewayConfig `yaml:"gateway" validate:"required"`
-	DataPath string        `yaml:"data_path" validate:"required"`
+	filepath   string
+	Web        WebConfig     `yaml:"web" validate:"required"`
+	Gateway    GatewayConfig `yaml:"gateway" validate:"required"`
+	DataPath   string        `yaml:"data_path" validate:"required"`
+	APIConfigs []APIConfig   `yaml:"api_configs" validate:"required"`
 	// MessageBroker MessageBrokerConfig `yaml:"message_broker" validate:"required"`
 }
 

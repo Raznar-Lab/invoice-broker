@@ -1,12 +1,18 @@
-package invoice
+package services_invoice
 
 import (
 	"bytes"
 	"log"
 	"net/http"
+
+	services_base "raznar.id/invoice-broker/internal/app/services/base"
 )
 
-func ForwardWebhookData(body []byte, urlList []string, header []string, token string) {
+type InvoiceService struct {
+	services_base.BaseService
+}
+
+func (s InvoiceService) ForwardWebhookData(body []byte, urlList []string, header []string, token string) {
 	for _, url := range urlList {
 		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")

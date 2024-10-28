@@ -6,9 +6,9 @@ package cmd
 import (
 	"log"
 	"strings"
-	"github.com/spf13/cobra"
-	"raznar.id/invoice-broker/pkg/app"
 
+	"github.com/spf13/cobra"
+	"raznar.id/invoice-broker/internal/app"
 )
 
 func startServer(configFile string) {

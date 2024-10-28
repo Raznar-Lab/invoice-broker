@@ -2,9 +2,10 @@ package app
 
 import (
 	"log"
+
 	"raznar.id/invoice-broker/configs"
-	"raznar.id/invoice-broker/pkg/internal/database"
-	"raznar.id/invoice-broker/pkg/internal/rest"
+	"raznar.id/invoice-broker/internal/app/rest"
+	"raznar.id/invoice-broker/internal/pkg/database"
 )
 
 func Start(configFile string) {
