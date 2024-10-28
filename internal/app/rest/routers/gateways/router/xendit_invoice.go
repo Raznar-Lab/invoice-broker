@@ -141,6 +141,10 @@ func (r XenditGatewayRouter) InvoiceGetHandler(c *fiber.Ctx) (err error) {
 		return c.SendStatus(fiber.StatusNotFound)
 	}
 
+	if transaction.Organization != apiData.Organization {
+		return c.SendStatus(fiber.StatusNotFound)
+	}
+
 	responseJSON, err := json.Marshal(transaction)
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
