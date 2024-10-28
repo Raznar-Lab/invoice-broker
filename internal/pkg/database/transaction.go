@@ -38,6 +38,19 @@ func (d *Database) GetTransaction(invoiceId string) (transaction *models.Transac
 	return
 }
 
+func (d *Database) GetTransactionAllId(id string) (transaction *models.TransactionModel) {
+	d.tc.m.Lock()
+	defer d.tc.m.Unlock()
+	for _, t := range d.tc.models {
+		if t.Id == id || t.TransactionID == id {
+			transaction = t
+			return
+		}
+	}
+
+	return
+}
+
 func (d *Database) AddTransaction(transaction *models.TransactionModel) (err error) {
 	if d.GetTransactionByTrID(transaction.TransactionID) != nil {
 		err = errors.New("short url with that id is already exists")

@@ -145,7 +145,7 @@ func (r XenditGatewayRouter) InvoiceGetHandler(c *fiber.Ctx) (err error) {
 	}
 
 	invoiceId := c.Params("id")
-	transaction := r.DB.GetTransaction(invoiceId)
+	transaction := r.DB.GetTransactionAllId(invoiceId)
 	if transaction == nil {
 		return c.SendStatus(fiber.StatusNotFound)
 	}
