@@ -6,11 +6,13 @@ import (
 	"net/http"
 )
 
-func ForwardWebhookData(body []byte, urlList []string, header string, token string) {
+func ForwardWebhookData(body []byte, urlList []string, header []string, token string) {
 	for _, url := range urlList {
 		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set(header, token)
+		for _, v := range header {
+			req.Header.Set(v, token)
+		}
 
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {

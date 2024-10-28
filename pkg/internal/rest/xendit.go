@@ -59,13 +59,12 @@ func initXendit(app *fiber.App, conf configs.PaymentConfig, webConfig configs.We
 		body := c.Body()
 		go func() {
 			apiConf := webConfig.GetAPIConfig(transaction.Organization)
-			if(apiConf == nil) {
+			if apiConf == nil {
 				fmt.Printf("An error occured when forwarding webhook data, api conf with organization %s is null\n", transaction.Organization)
 				return
 			}
 
-			
-			invoice.ForwardWebhookData(body, apiConf.CallbackURLS, "x-callback-token", apiConf.Token)
+			invoice.ForwardWebhookData(body, apiConf.CallbackURLS, []string{"x-callback-token", "X-Callback-Token"}, apiConf.Token)
 		}()
 
 		return c.SendStatus(fiber.StatusOK)
@@ -128,7 +127,7 @@ func initXendit(app *fiber.App, conf configs.PaymentConfig, webConfig configs.We
 		if err != nil {
 			return c.SendStatus(fiber.StatusBadGateway)
 		}
-		
+
 		responseData := XenditInvoiceResponse{
 			TransactionID: transaction.GetId(),
 			Link:          transaction.InvoiceUrl,
