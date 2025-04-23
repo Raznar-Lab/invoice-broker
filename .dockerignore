@@ -1,5 +1,5 @@
 config.yml
 build
-Dockerfiler
+Dockerfile
 docker-compose*
 data.json
