@@ -20,8 +20,8 @@ func New(app *fiber.App, config *configs.Config, database *database.Database) ba
 	return router
 }
 
-func (r XenditGatewayRouter) Init() {
-	xGroup := r.App.Group(fmt.Sprintf("/gateway/%s", r.Config.Gateway.Xendit.Label))
+func (r XenditGatewayRouter) Init(g fiber.Router) {
+	xGroup := g.Group(fmt.Sprintf("/gateway/%s", r.Config.Gateway.Xendit.Label))
 
 	invGroup := xGroup.Group("/invoice")
 	invGroup.Post("/cb", r.InvoiceCallbackHandler)

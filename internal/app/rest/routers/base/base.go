@@ -19,5 +19,5 @@ func (r *BaseRouter) Set(app *fiber.App, config *configs.Config, db *database.Da
 }
 
 type IBaseRouter interface {
-	Init()
+	Init(g fiber.Router)
 }
