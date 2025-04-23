@@ -35,7 +35,7 @@ jobs:
               id: docker_meta
               uses: docker/metadata-action@v5
               with:
-                  images: ghcr.io/${{ variables.GHCR_USERNAME }}/${{ variables.GHCR_IMAGE_NAME }}
+                  images: ghcr.io/${{ vars.GHCR_USERNAME }}/${{ vars.GHCR_IMAGE_NAME }}
                   flavor: |
                       latest=false
                   tags: |
