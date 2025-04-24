@@ -1,10 +1,10 @@
 package router_xendit_gateway
 
 import (
-	"slices"
 	"github.com/gofiber/fiber/v2"
 	xenInvoice "github.com/xendit/xendit-go/v5/invoice"
 	"raznar.id/invoice-broker/internal/app/services"
+	"slices"
 )
 
 type xenditInvoiceCallbackHeader struct {
@@ -17,7 +17,7 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 
 	// webhook id is unused, idk what to implement atm
 	xenditHeader := xenditInvoiceCallbackHeader{
-		WebhookId:     c.Get("webhook-id"),
+		WebhookId: c.Get("webhook-id"),
 	}
 
 	if c.Get("x-callback-token") != "" {
@@ -47,18 +47,21 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 
 	body := c.Body()
 	go func() {
-		urls := paymentConfig.CallbackURLS
 
-		apiConf := r.Config.GetAPIConfigByOrganization(transaction.Organization)
-		if apiConf != nil {
-			urls = append(urls, apiConf.CallbackURLS...)
-		} 
-
-
+		tokenHeaders :=  []string{"x-callback-token", "X-Callback-Token", "X-CALLBACK-TOKEN"}
 		if transaction != nil {
-			urls = append(urls, transaction.CallbackURLS...)
+			apiConf := r.Config.GetAPIConfigByOrganization(transaction.Organization)
+			if apiConf != nil {
+				services.Invoice().ForwardWebhookData(body, apiConf.CallbackURLS, tokenHeaders, apiConf.Token)
+				services.Invoice().ForwardWebhookData(body, transaction.CallbackURLS, tokenHeaders, apiConf.Token)
+			} else {
+				services.Invoice().ForwardWebhookData(body, transaction.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
+			}
+
+
 		}
-		services.Invoice().ForwardWebhookData(body, urls, []string{"x-callback-token", "X-Callback-Token"}, apiConf.Token)
+
+		services.Invoice().ForwardWebhookData(body, paymentConfig.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
 	}()
 
 	return c.SendStatus(fiber.StatusOK)
