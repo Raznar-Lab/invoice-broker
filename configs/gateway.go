@@ -6,7 +6,8 @@ type GatewayConfig struct {
 }
 
 type PaymentConfig struct {
-	APIKey        string   `yaml:"api_key"`
-	Label         string   `yaml:"label"`
+	APIKey         string   `yaml:"api_key"`
+	Label          string   `yaml:"label"`
 	CallbackTokens []string `yaml:"callback_tokens"`
+	CallbackURLS   []string `yaml:"callback_urls"`
 }

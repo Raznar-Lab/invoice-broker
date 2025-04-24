@@ -1,9 +1,7 @@
 package router_xendit_gateway
 
 import (
-	"fmt"
 	"slices"
-
 	"github.com/gofiber/fiber/v2"
 	xenInvoice "github.com/xendit/xendit-go/v5/invoice"
 	"raznar.id/invoice-broker/internal/app/services"
@@ -19,12 +17,21 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 
 	// webhook id is unused, idk what to implement atm
 	xenditHeader := xenditInvoiceCallbackHeader{
-		CallbackToken: c.Get("X-CALLBACK-TOKEN"),
 		WebhookId:     c.Get("webhook-id"),
 	}
 
+	if c.Get("x-callback-token") != "" {
+		xenditHeader.CallbackToken = c.Get("x-callback-token")
+	} else if c.Get("X-Callback-Token") != "" {
+		xenditHeader.CallbackToken = c.Get("X-Callback-Token")
+	} else if c.Get("X-CALLBACK-TOKEN") != "" {
+		xenditHeader.CallbackToken = c.Get("X-CALLBACK-TOKEN")
+	} else {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
 	if !slices.Contains(paymentConfig.CallbackTokens, xenditHeader.CallbackToken) {
-		return c.SendStatus(fiber.ErrUnauthorized.Code)
+		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
 	var invoiceData xenInvoice.Invoice
@@ -33,22 +40,24 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 	}
 
 	transaction := r.DB.GetTransactionByTrID(invoiceData.GetId())
-	if transaction == nil {
-		return c.SendStatus(fiber.StatusNotFound)
+	if transaction != nil {
+		transaction.Status = invoiceData.GetStatus().String()
+		r.DB.SilentSave()
 	}
-
-	transaction.Status = invoiceData.GetStatus().String()
-	r.DB.SilentSave()
 
 	body := c.Body()
 	go func() {
-		apiConf := r.Config.GetAPIConfigByOrganization(transaction.Organization)
-		if apiConf == nil {
-			fmt.Printf("An error occured when forwarding webhook data, api conf with organization %s is null\n", transaction.Organization)
-			return
-		}
+		urls := paymentConfig.CallbackURLS
 
-		urls := append(apiConf.CallbackURLS, transaction.CallbackURLS...)
+		apiConf := r.Config.GetAPIConfigByOrganization(transaction.Organization)
+		if apiConf != nil {
+			urls = append(urls, apiConf.CallbackURLS...)
+		} 
+
+
+		if transaction != nil {
+			urls = append(urls, transaction.CallbackURLS...)
+		}
 		services.Invoice().ForwardWebhookData(body, urls, []string{"x-callback-token", "X-Callback-Token"}, apiConf.Token)
 	}()
 
