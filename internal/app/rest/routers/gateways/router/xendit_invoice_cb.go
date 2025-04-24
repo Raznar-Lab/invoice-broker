@@ -19,7 +19,7 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 
 	// webhook id is unused, idk what to implement atm
 	xenditHeader := xenditInvoiceCallbackHeader{
-		CallbackToken: c.Get("x-callback-token"),
+		CallbackToken: c.Get("X-CALLBACK-TOKEN"),
 		WebhookId:     c.Get("webhook-id"),
 	}
 
