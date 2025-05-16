@@ -2,11 +2,10 @@ package services_invoice
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/dustin/go-humanize"
 	"raznar.id/invoice-broker/configs"
 	services_base "raznar.id/invoice-broker/internal/app/services/base"
 	"raznar.id/invoice-broker/internal/dtos"
@@ -37,15 +36,10 @@ func (s InvoiceService) ForwardCallbackData(body []byte, urlList []string, heade
 
 func (s InvoiceService) ForwardWebhookData(data dtos.WebhookInvoiceData, webhooks map[string]configs.PaymentWebhookConfig) {
 	for _, w := range webhooks {
-		content := w.Content
+		content := w.ApplyVariables(w.Content, data)
 		for vk, vv := range w.Variables {
-			vv = strings.ReplaceAll(vv, "{transaction_id}", data.InvoiceId)
-			vv = strings.ReplaceAll(vv, "{external_id}", data.ExternalId)
-			vv = strings.ReplaceAll(vv, "{amount}", humanize.Commaf(data.Amount))
-			vv = strings.ReplaceAll(vv, "{fee}", humanize.Commaf(data.Fee))
-			vv = strings.ReplaceAll(vv, "{gateway}", data.Gateway)
-			vv = strings.ReplaceAll(vv, "{currency}", data.Currency)
-			content = strings.ReplaceAll(content, vk, vv)
+			vv = w.ApplyVariables(vv, data)
+			content = strings.ReplaceAll(content, fmt.Sprintf("{%s}", vk), vv)
 		}
 
 		req, _ := http.NewRequest("POST", w.URL, bytes.NewBuffer([]byte(content)))

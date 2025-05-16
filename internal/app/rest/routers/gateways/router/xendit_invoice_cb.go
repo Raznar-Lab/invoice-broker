@@ -73,8 +73,11 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 			ExternalId: invoiceData.GetExternalId(),
 			Amount:     invoiceData.GetAmount(),
 			Fee:        invoiceFees,
-			Gateway:    constants.GATEWAY_XENDIT_ID.String(),
+			Gateway:    constants.GATEWAY_XENDIT,
 			Currency:   invoiceData.GetCurrency().String(),
+			Status:     invoiceData.GetStatus().String(),
+			URL:        invoiceData.GetInvoiceUrl(),
+			Description: invoiceData.GetDescription(),
 		}, paymentConfig.Webhooks)
 	}()
 
