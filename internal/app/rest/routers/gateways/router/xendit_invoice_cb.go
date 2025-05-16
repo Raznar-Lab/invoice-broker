@@ -1,10 +1,13 @@
 package router_xendit_gateway
 
 import (
+	"slices"
+
 	"github.com/gofiber/fiber/v2"
 	xenInvoice "github.com/xendit/xendit-go/v5/invoice"
 	"raznar.id/invoice-broker/internal/app/services"
-	"slices"
+	"raznar.id/invoice-broker/internal/dtos"
+	"raznar.id/invoice-broker/internal/pkg/constants"
 )
 
 type xenditInvoiceCallbackHeader struct {
@@ -47,21 +50,32 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 
 	body := c.Body()
 	go func() {
-
-		tokenHeaders :=  []string{"x-callback-token", "X-Callback-Token", "X-CALLBACK-TOKEN"}
+		tokenHeaders := []string{"x-callback-token", "X-Callback-Token", "X-CALLBACK-TOKEN"}
 		if transaction != nil {
 			apiConf := r.Config.GetAPIConfigByOrganization(transaction.Organization)
 			if apiConf != nil {
-				services.Invoice().ForwardWebhookData(body, apiConf.CallbackURLS, tokenHeaders, apiConf.Token)
-				services.Invoice().ForwardWebhookData(body, transaction.CallbackURLS, tokenHeaders, apiConf.Token)
+				services.Invoice().ForwardCallbackData(body, apiConf.CallbackURLS, tokenHeaders, apiConf.Token)
+				services.Invoice().ForwardCallbackData(body, transaction.CallbackURLS, tokenHeaders, apiConf.Token)
 			} else {
-				services.Invoice().ForwardWebhookData(body, transaction.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
+				services.Invoice().ForwardCallbackData(body, transaction.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
 			}
-
 
 		}
 
-		services.Invoice().ForwardWebhookData(body, paymentConfig.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
+		services.Invoice().ForwardCallbackData(body, paymentConfig.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
+		invoiceFees := 0.0
+		for _, fee := range invoiceData.GetFees() {
+			invoiceFees += float64(fee.GetValue())
+		}
+
+		services.Invoice().ForwardWebhookData(dtos.WebhookInvoiceData{
+			InvoiceId:  invoiceData.GetId(),
+			ExternalId: invoiceData.GetExternalId(),
+			Amount:     invoiceData.GetAmount(),
+			Fee:        invoiceFees,
+			Gateway:    constants.GATEWAY_XENDIT_ID.String(),
+			Currency:   invoiceData.GetCurrency().String(),
+		}, paymentConfig.Webhooks)
 	}()
 
 	return c.SendStatus(fiber.StatusOK)
