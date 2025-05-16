@@ -57,8 +57,6 @@ func (r XenditGatewayRouter) InvoiceCallbackHandler(c *fiber.Ctx) (err error) {
 			} else {
 				services.Invoice().ForwardWebhookData(body, transaction.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
 			}
-
-
 		}
 
 		services.Invoice().ForwardWebhookData(body, paymentConfig.CallbackURLS, tokenHeaders, xenditHeader.CallbackToken)
