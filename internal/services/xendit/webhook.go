@@ -11,7 +11,7 @@ import (
 )
 
 type ValidationPayload struct {
-	PaymentConfig configs.GatewayConfig
+	PaymentConfig *configs.GatewayConfig
 	Invoice       *xenInvoice.Invoice
 	CallbackToken string
 }

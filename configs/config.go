@@ -2,6 +2,7 @@ package configs
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/caarlos0/env/v10"
@@ -10,15 +11,15 @@ import (
 )
 
 type Config struct {
-	Server  ServerConfig             `envPrefix:"SERVER_" validate:"required"`
-	Gateway map[string]GatewayConfig `env:"-"`
+	Server  ServerConfig              `envPrefix:"SERVER_" validate:"required"`
+	Gateway map[string]*GatewayConfig `env:"-"`
 }
 
 var validate = validator.New()
 
 func New() (*Config, error) {
 	config := &Config{
-		Gateway: make(map[string]GatewayConfig),
+		Gateway: make(map[string]*GatewayConfig),
 	}
 
 	// 1. Parse Server Config
@@ -44,8 +45,11 @@ func New() (*Config, error) {
 			field := strings.Join(parts[3:], "_") // e.g., "API_KEY"
 
 			// Get or Create the GatewayConfig for this label
-			gc := config.Gateway[label]
-
+			gc, ok := config.Gateway[label]
+			if !ok || gc == nil {
+				gc = &GatewayConfig{}
+				config.Gateway[label] = gc
+			}
 			// Assign values based on provider and field
 			switch provider {
 			case "xendit":
@@ -82,10 +86,21 @@ func fillPaymentConfig(p *PaymentConfig, field, value string) {
 			Int("count", len(p.WebhookTokens)).
 			Msg("Parsed webhook tokens")
 
+	case "SANDBOX":
+		v, err := strconv.ParseBool(value)
+		if err != nil {
+			log.Warn().
+				Str("value", value).
+				Msg("Invalid SANDBOX value, defaulting to false")
+			return
+		}
+		p.Sandbox = v
+
 	case "CALLBACK_URLS":
 		p.CallbackURLs = strings.Split(value, ",")
 		log.Debug().
 			Int("count", len(p.CallbackURLs)).
 			Msg("Parsed callback URLs")
 	}
+
 }

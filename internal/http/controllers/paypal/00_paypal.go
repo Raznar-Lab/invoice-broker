@@ -1,4 +1,4 @@
-package xendit_controller
+package paypal_controller
 
 import (
 	"raznar.id/invoice-broker/configs"
@@ -6,14 +6,14 @@ import (
 	"raznar.id/invoice-broker/internal/services"
 )
 
-type XenditController struct {
+type PaypalController struct {
 	paymentConfig *configs.GatewayConfig
 	base_controller.BaseController
 }
 
-func New(c *configs.Config, s *services.Services, paymentConfig *configs.GatewayConfig) *XenditController {
+func New(c *configs.Config, s *services.Services, paymentConfig *configs.GatewayConfig) *PaypalController {
 
-	x := &XenditController{
+	x := &PaypalController{
 		paymentConfig: paymentConfig,
 	}
 

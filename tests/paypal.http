@@ -1,0 +1,13 @@
+### Create PayPal Invoice (Sandbox)
+POST http://localhost:3000/api/paypal/store1/invoice
+Content-Type: application/json
+Authorization: Bearer secret_token
+
+{
+  "id": "INV-10001",
+  "description": "Raznar Hosting Invoice #10001",
+  "amount": 10.00,
+  "return_url": "https://example.com/payment/success",
+  "cancel_url": "https://example.com/payment/cancel",
+  "notify_url": "https://your-domain.com/paypal/ipn/main"
+}

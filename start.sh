@@ -3,3 +3,4 @@
 export $(grep -v '^#' .env | xargs)
 
 go run . -d
+sleep infinity

@@ -11,7 +11,7 @@ import (
 )
 
 type CreateInvoicePayload struct {
-	PaymentConfig   configs.GatewayConfig // Added PaymentConfig directly
+	PaymentConfig   *configs.GatewayConfig // Added PaymentConfig directly
 	ID              string
 	Description     string
 	Amount          float64

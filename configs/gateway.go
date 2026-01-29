@@ -9,4 +9,5 @@ type PaymentConfig struct {
 	APIKey        string   `json:"api_key"`
 	WebhookTokens []string `json:"webhook_tokens"`
 	CallbackURLs  []string `json:"callback_urls"`
+	Sandbox       bool     `json:"sandbox"`
 }

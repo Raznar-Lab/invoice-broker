@@ -18,6 +18,10 @@ type XenditRoute struct {
 
 func (r *XenditRoute) Register() {
 	for labelKey, cfg := range r.Config.Gateway {
+		if cfg == nil {
+			return
+		}
+
 		ctrl := xendit_controller.New(r.Config, r.Services, cfg)
 
 		label := fmt.Sprintf("/xendit/%s", strings.ToLower(labelKey))
