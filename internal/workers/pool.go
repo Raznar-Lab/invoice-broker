@@ -1,0 +1,52 @@
+package workers
+
+import (
+	"raznar.id/invoice-broker/internal/jobs"
+	"sync"
+)
+
+var (
+	instance *Pool
+	once     sync.Once
+)
+
+type Pool struct {
+	queue chan jobs.Job
+}
+
+// Init initializes the global worker pool once
+func Init(bufferSize int, workerCount int) {
+	once.Do(func() {
+		instance = &Pool{
+			queue: make(chan jobs.Job, bufferSize),
+		}
+		instance.start(workerCount)
+	})
+}
+
+// Enqueue provides a global entry point to the pool
+func Enqueue(job jobs.Job) bool {
+	if instance == nil {
+		return false
+	}
+	return instance.enqueue(job)
+}
+
+func (p *Pool) start(count int) {
+	for i := 0; i < count; i++ {
+		go func(id int) {
+			for job := range p.queue {
+				_ = job.Run(id)
+			}
+		}(i)
+	}
+}
+
+func (p *Pool) enqueue(job jobs.Job) bool {
+	select {
+	case p.queue <- job:
+		return true
+	default:
+		return false
+	}
+}

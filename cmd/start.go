@@ -4,75 +4,43 @@ Copyright © 2024 Raznar Lab <xabhista19@raznar.id>
 package cmd
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"strings"
-
-	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"raznar.id/invoice-broker/config"
-	"raznar.id/invoice-broker/internal/rest"
+	"raznar.id/invoice-broker/configs"
+	"raznar.id/invoice-broker/internal/app"
+	"raznar.id/invoice-broker/internal/services"
+	"raznar.id/invoice-broker/internal/workers"
 )
 
-func startServer(configFile string) {
-	if !strings.HasSuffix(configFile, ".yml") {
-		log.Fatalf("The config file must be yml! instead of %s", configFile)
-	}
+func startServer() {
 
-	conf, err := config.New(configFile)
+	conf, err := configs.New()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     conf.Redis.Host + ":" + conf.Redis.Port,
-		Password: conf.Redis.Password,
-		DB:       conf.Redis.DB,
-	})
+	// Start background workers (e.g., 5 workers)
+	// This will now use the GlobalLevel (Debug/Info) set in initConfig
+	workers.Init(5000, 20)
 
-	ctx := context.Background()
-	err = rdb.Ping(ctx).Err()
+	log.Info().
+		Bool("debug_enabled", debugMode).
+		Msg("Starting Invoice Broker server...")
 
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully connected to redis database.")
-	}
-
-	// fiber has built-in block, so we dont need any signal block
-	if err = rest.Start(conf, rdb); err != nil {
-		log.Fatalf("An error occured when starting the bot: %s", err.Error())
+	s := services.New(conf)
+	if err = app.Start(conf, s); err != nil {
+		log.Fatal().Err(err).Msg("An error occurred when starting the service")
 	}
 }
 
-// startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Start the broker server",
 	Run: func(cmd *cobra.Command, args []string) {
-		configFile := cmd.Flag("config").Value.String()
-		startServer(configFile)
+		startServer()
 	},
 }
 
 func init() {
-	startCmd.Flags().String("config", "config.yml", "Configuration file")
 	rootCmd.AddCommand(startCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// startCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

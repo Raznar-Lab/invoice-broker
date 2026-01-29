@@ -1,16 +1,13 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
 	"os"
+	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
-
-
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -27,25 +24,43 @@ to quickly create a Cobra application.`,
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+var (
+	debugMode bool
+	verbose   bool
+)
+
+func initConfig() {
+	// 1. Set the global logging level
+	if debugMode {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+	// Setup zerolog console formatting
+	zerolog.TimeFieldFormat = time.RFC3339
+
+	// Console writer
+	consoleWriter := zerolog.ConsoleWriter{
+		Out:        os.Stderr,
+		TimeFormat: time.RFC3339,
+	}
+
+	// Set global logger
+	log.Logger = zerolog.New(consoleWriter).With().Timestamp().Logger()
+}
+
+func init() {
+	// Persistent flags are available to all subcommands (like 'start')
+	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "Enable debug logging")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable human-readable console output")
+
+	// This ensures config/logging is set up before any command runs
+	cobra.OnInitialize(initConfig)
+}
+
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
-
-func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.invoice-broker.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-
-
