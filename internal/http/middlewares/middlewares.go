@@ -7,10 +7,12 @@ import (
 
 type Middlewares struct {
 	Logger gin.HandlerFunc
+	Auth   gin.HandlerFunc
 }
 
 func New(c *configs.Config) *Middlewares {
 	return &Middlewares{
 		Logger: LogMiddleware,
+		Auth:   AuthMiddleware(c),
 	}
 }

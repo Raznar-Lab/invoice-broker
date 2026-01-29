@@ -3,24 +3,38 @@ package notifications
 import (
 	"encoding/json"
 
+	"github.com/rs/zerolog/log"
 	webhook_job "raznar.id/invoice-broker/internal/jobs/webhook"
-	"raznar.id/invoice-broker/internal/workers"
 )
 
 func SendWebhook(content any, urlList []string, header string, token string) error {
-	body, _ := json.Marshal(content)
+	body, err := json.Marshal(content)
+	if err != nil {
+		log.Debug().
+			Err(err).
+			Msg("Failed to marshal webhook content")
+		return err
+	}
+
+	log.Debug().
+		Int("url_count", len(urlList)).
+		Msg("Dispatching webhook jobs")
 
 	for _, url := range urlList {
-		job := webhook_job.WebhookJob{
-			// Note: The job struct still needs a way to re-enqueue itself
-			// We can modify the job to use workers.Enqueue() instead of j.Pool.Enqueue()
+		log.Debug().
+			Str("url", url).
+			Str("header", header).
+			Msg("Enqueuing webhook job")
+
+		job := webhook_job.New(webhook_job.Payload{
 			Content: body,
 			URL:     url,
 			Header:  header,
 			Token:   token,
-		}
+		})
 
-		workers.Enqueue(job)
+		job.Enqueue()
 	}
+
 	return nil
 }

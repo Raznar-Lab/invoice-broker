@@ -6,6 +6,7 @@ import (
 
 	"github.com/caarlos0/env/v10"
 	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
 )
 
 type Config struct {
@@ -66,12 +67,25 @@ func New() (*Config, error) {
 
 // Helper to fill the sub-struct fields
 func fillPaymentConfig(p *PaymentConfig, field, value string) {
+	log.Debug().
+		Str("field", field).
+		Msg("Filling payment config field")
+
 	switch field {
 	case "API_KEY":
+		// don't log the value, it's sensitive
 		p.APIKey = value
+
 	case "WEBHOOK_TOKENS":
 		p.WebhookTokens = strings.Split(value, ",")
+		log.Debug().
+			Int("count", len(p.WebhookTokens)).
+			Msg("Parsed webhook tokens")
+
 	case "CALLBACK_URLS":
 		p.CallbackURLs = strings.Split(value, ",")
+		log.Debug().
+			Int("count", len(p.CallbackURLs)).
+			Msg("Parsed callback URLs")
 	}
 }

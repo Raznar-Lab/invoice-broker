@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 	"raznar.id/invoice-broker/configs"
 	"raznar.id/invoice-broker/internal/app"
 	"raznar.id/invoice-broker/internal/services"
@@ -13,7 +12,6 @@ import (
 )
 
 func startServer() {
-
 	conf, err := configs.New()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load configuration")
@@ -31,16 +29,4 @@ func startServer() {
 	if err = app.Start(conf, s); err != nil {
 		log.Fatal().Err(err).Msg("An error occurred when starting the service")
 	}
-}
-
-var startCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Start the broker server",
-	Run: func(cmd *cobra.Command, args []string) {
-		startServer()
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(startCmd)
 }

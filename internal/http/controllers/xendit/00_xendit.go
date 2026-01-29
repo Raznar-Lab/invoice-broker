@@ -3,7 +3,6 @@ package xendit_controller
 import (
 	"raznar.id/invoice-broker/configs"
 	base_controller "raznar.id/invoice-broker/internal/http/controllers/base"
-	"raznar.id/invoice-broker/internal/http/middlewares"
 	"raznar.id/invoice-broker/internal/services"
 )
 
@@ -12,14 +11,14 @@ type XenditController struct {
 	base_controller.BaseController
 }
 
-func New(c *configs.Config, s *services.Services, m *middlewares.Middlewares, paymentConfig configs.GatewayConfig) *XenditController {
+func New(c *configs.Config, s *services.Services, paymentConfig configs.GatewayConfig) *XenditController {
 
 	x := &XenditController{
 		paymentConfig: paymentConfig,
 	}
 
 	// 2. Set the base dependencies
-	x.Set(c, s, m)
+	x.Set(c, s)
 
 	return x
 }

@@ -34,7 +34,7 @@ func (x *XenditService) ValidateWebhook(payload ValidationPayload) bool {
 	// Forward data to the background queue (this is non-blocking now)
 	err := notifications.SendWebhook(
 		payload.Invoice,
-		payload.PaymentConfig.Paypal.CallbackURLs,
+		payload.PaymentConfig.Xendit.CallbackURLs,
 		constants.XENDIT_WEBHOOK_HEADER,
 		payload.CallbackToken,
 	)

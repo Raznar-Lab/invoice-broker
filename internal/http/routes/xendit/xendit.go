@@ -2,6 +2,7 @@ package xendit_route
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"raznar.id/invoice-broker/configs"
@@ -16,20 +17,22 @@ type XenditRoute struct {
 }
 
 func (r *XenditRoute) Register() {
-	// Loop through all gateways defined in the config
-	for label, cfg := range r.Config.Gateway {
-		// Initialize the controller for this specific gateway
-		ctrl := xendit_controller.New(r.Config, r.Services, r.Middlewares, cfg)
+	for labelKey, cfg := range r.Config.Gateway {
+		ctrl := xendit_controller.New(r.Config, r.Services, cfg)
 
-		// Create a group for this label: /api/xendit/{label}
-		g := r.RG.Group(fmt.Sprintf("/xendit/%s", label))
+		label := fmt.Sprintf("/xendit/%s", strings.ToLower(labelKey))
+
+		// API routes (authenticated)
+		api := r.RG.Group(label)
 		{
-			g.POST("/invoice", ctrl.CreateInvoice)
+			api.Use(r.Middlewares.Auth)
+			api.POST("/invoice", ctrl.CreateInvoice)
 		}
 
-		gg := r.RG.Group(fmt.Sprintf("/webhook/xendit/%s", label))
+		// Webhook routes (NO auth)
+		webhook := r.RG.Group("/webhook" + label)
 		{
-			gg.POST("/", ctrl.ValidateWebhook)
+			webhook.POST("", ctrl.ValidateWebhook)
 		}
 	}
 }

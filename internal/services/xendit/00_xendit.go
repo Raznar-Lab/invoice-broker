@@ -9,14 +9,6 @@ type XenditService struct {
 	base_service.Service
 }
 
-
-
-func (x *XenditService) Init() {
-
-}
-
-
-
 func New(c *configs.Config) *XenditService {
 	v := &XenditService{}
 	v.Set(c)
