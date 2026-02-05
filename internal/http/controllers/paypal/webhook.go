@@ -10,40 +10,38 @@ import (
 	paypal_service "raznar.id/invoice-broker/internal/services/paypal"
 )
 
-func (x *PaypalController) ValidateIPN(c *gin.Context) {
+func (x *PaypalController) Webhook(c *gin.Context) {
 	log.Debug().
 		Str("ip", c.ClientIP()).
 		Str("path", c.FullPath()).
-		Msg("PayPal IPN received")
+		Msg("paypal webhook received")
 
-	// Read raw body (MANDATORY for IPN)
 	rawBody, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Error().
 			Err(err).
-			Msg("Failed to read PayPal IPN body")
+			Msg("failed to read paypal webhook body")
 
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
-	payload := paypal_service.ValidationPayload{
+	payload := paypal_service.WebhookValidationPayload{
 		PaymentConfig: x.paymentConfig,
+		Headers:       c.Request.Header,
 		RawBody:       rawBody,
 	}
 
-	if !x.Services.Paypal.ValidateIPN(payload) {
+	if !x.Services.Paypal.ValidateWebhook(payload) {
 		log.Warn().
-			Msg("PayPal IPN validation failed")
+			Msg("paypal webhook validation failed")
 
-		// PayPal expects 200 even on logical failure
-		c.Status(http.StatusOK)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	log.Info().
-		Msg("PayPal IPN validated successfully")
+		Msg("paypal webhook verified successfully")
 
-	// MUST return 200 OK or PayPal will retry
 	c.Status(http.StatusOK)
 }

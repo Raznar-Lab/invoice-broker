@@ -20,7 +20,7 @@ func (r *PaypalRoute) Register() {
 		if cfg == nil {
 			return
 		}
-		
+
 		ctrl := paypal_controller.New(
 			r.Config,
 			r.Services,
@@ -29,21 +29,19 @@ func (r *PaypalRoute) Register() {
 
 		label := strings.ToLower(labelKey)
 
-		// Authenticated API
+		// Authenticated API (your client creates orders)
 		api := r.RG.Group("/paypal/" + label)
 		{
 			api.Use(r.Middlewares.Auth)
-			api.POST("/invoice", ctrl.CreateInvoice)
+			api.POST("/order", ctrl.CreateOrder) // CREATE ORDER
 		}
 
-		// IPN endpoint (NO auth)
-		ipn := r.RG.Group("/paypal/ipn/" + label)
-		{
-			ipn.POST("", ctrl.ValidateIPN)
-		}
+		// Unauthenticated API (PayPal callbacks)
+		r.RG.POST("/paypal/webhook/"+label, ctrl.Webhook) // webhook from PayPal
+		r.RG.GET("/paypal/return/"+label, ctrl.Return)    // user redirected after approval
+
 	}
 }
-
 
 func New(c *configs.Config, s *services.Services, m *middlewares.Middlewares, rg *gin.RouterGroup) *PaypalRoute {
 	x := &PaypalRoute{}

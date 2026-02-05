@@ -76,6 +76,9 @@ func fillPaymentConfig(p *PaymentConfig, field, value string) {
 		Msg("Filling payment config field")
 
 	switch field {
+	case "API_ID":
+		// don't log the value, it's sensitive
+		p.ApiID = value
 	case "API_KEY":
 		// don't log the value, it's sensitive
 		p.APIKey = value

@@ -1,5 +1,6 @@
-### Create PayPal Invoice (Sandbox)
-POST http://localhost:3000/api/paypal/store1/invoice
+
+### Create PayPal Order (Sandbox)
+POST http://localhost:3000/api/paypal/store1/order
 Content-Type: application/json
 Authorization: Bearer secret_token
 
@@ -11,3 +12,6 @@ Authorization: Bearer secret_token
   "cancel_url": "https://example.com/payment/cancel",
   "notify_url": "https://your-domain.com/paypal/ipn/main"
 }
+
+### Confirm Paypal Order (Sandbox)
+GET http://localhost:3000/api/paypal/return/store1?token=2EG76217F39768227

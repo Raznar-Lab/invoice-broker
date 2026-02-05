@@ -14,11 +14,9 @@ import (
 
 const (
 	RetryDelay = 1 * time.Hour
-	// Retry once per hour for 4 days (96 retries)
-	MaxRetries = 24 * 4
+	MaxRetries = 24 * 4 // 4 days, 96 retries
 )
 
-// job registry (ID -> *WebhookJob)
 var activeJobs sync.Map
 
 type Payload struct {
@@ -45,7 +43,6 @@ type WebhookJob struct {
 }
 
 // ---------- constructor ----------
-
 func New(payload Payload) *WebhookJob {
 	return &WebhookJob{
 		ID:      payload.ID(),
@@ -57,12 +54,11 @@ func New(payload Payload) *WebhookJob {
 }
 
 // ---------- enqueue ----------
-
 func (j *WebhookJob) Enqueue() bool {
-	// Deduplicate by job ID
 	if _, exists := activeJobs.LoadOrStore(j.ID, j); exists {
 		log.Warn().
 			Str("job_id", j.ID).
+			Int("attempts", j.Attempts).
 			Msg("Webhook job already active, skipping enqueue")
 		return false
 	}
@@ -77,37 +73,41 @@ func (j *WebhookJob) Enqueue() bool {
 
 	log.Info().
 		Str("job_id", j.ID).
-		Int("attempt", j.Attempts+1).
-		Msg("Webhook job enqueued")
+		Int("attempts", j.Attempts).
+		Msg("Webhook job enqueued successfully")
 
 	return true
 }
 
 // ---------- worker execution ----------
-
 func (j *WebhookJob) Run(workerID int) error {
 	logger := log.With().
 		Int("worker_id", workerID).
 		Str("job_id", j.ID).
 		Str("url", j.URL).
-		Int("attempt", j.Attempts+1).
+		Int("attempts", j.Attempts).
 		Logger()
 
 	req, err := http.NewRequest("POST", j.URL, bytes.NewBuffer(j.Content))
 	if err != nil {
 		activeJobs.Delete(j.ID)
+		logger.Error().Err(err).Msg("Failed to create HTTP request for webhook")
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(j.Header, j.Token)
+	if j.Header != "" && j.Token != "" {
+		req.Header.Set(j.Header, j.Token)
+	}
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	res, err := client.Do(req)
 
 	// ---------- failure path ----------
-	if err != nil || (res.StatusCode >= 300 || res.StatusCode < 200) {
+	if err != nil || res == nil || res.StatusCode < 200 || res.StatusCode >= 300 {
+		statusCode := 0
 		if res != nil {
+			statusCode = res.StatusCode
 			res.Body.Close()
 		}
 
@@ -121,18 +121,20 @@ func (j *WebhookJob) Run(workerID int) error {
 			return nil
 		}
 
-		// IMPORTANT: remove before retry
-		activeJobs.Delete(j.ID)
-
 		logger.Warn().
 			Int("attempts", j.Attempts).
-			Int("code", res.StatusCode).
+			Int("status_code", statusCode).
 			Msg("Webhook failed, scheduling retry")
 
 		time.AfterFunc(RetryDelay, func() {
 			j.Enqueue()
+			log.Debug().
+				Str("job_id", j.ID).
+				Time("next_retry_at", time.Now().Add(RetryDelay)).
+				Msg("Scheduled webhook retry")
 		})
 
+		activeJobs.Delete(j.ID)
 		return nil
 	}
 
@@ -140,7 +142,9 @@ func (j *WebhookJob) Run(workerID int) error {
 	res.Body.Close()
 	activeJobs.Delete(j.ID)
 
-	logger.Info().Int("code", res.StatusCode).
+	logger.Info().
+		Int("status_code", res.StatusCode).
+		Int("attempts", j.Attempts).
 		Msg("Webhook delivered successfully")
 
 	return nil

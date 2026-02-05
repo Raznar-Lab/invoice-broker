@@ -17,7 +17,7 @@ type PayPalNewRequest struct {
 	CancelURL   string  `json:"cancel_url" binding:"required"`
 }
 
-func (p *PaypalController) CreateInvoice(c *gin.Context) {
+func (p *PaypalController) CreateOrder(c *gin.Context) {
 	var req PayPalNewRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -32,7 +32,7 @@ func (p *PaypalController) CreateInvoice(c *gin.Context) {
 		return
 	}
 
-	approvalURL, err := p.Services.Paypal.CreateInvoice(paypal_service.CreateInvoicePayload{
+	approvalURL, err := p.Services.Paypal.CreateOrder(paypal_service.CreateInvoicePayload{
 		PaymentConfig: p.paymentConfig,
 		ID:            req.ID,
 		Description:   req.Description,
