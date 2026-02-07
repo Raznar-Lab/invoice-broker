@@ -1,7 +1,6 @@
 package xendit_route
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -22,19 +21,19 @@ func (r *XenditRoute) Register() {
 			return
 		}
 
-		ctrl := xendit_controller.New(r.Config, r.Services, cfg)
+		ctrl := xendit_controller.New(r.Config, r.Services, &cfg.Xendit)
 
-		label := fmt.Sprintf("/xendit/%s", strings.ToLower(labelKey))
+		label := strings.ToLower(labelKey)
 
 		// API routes (authenticated)
-		api := r.RG.Group(label)
+		api := r.RG.Group("/xendit/" + label)
 		{
 			api.Use(r.Middlewares.Auth)
 			api.POST("/invoice", ctrl.CreateInvoice)
 		}
 
 		// Webhook routes (NO auth)
-		webhook := r.RG.Group("/webhook" + label)
+		webhook := r.RG.Group("/xendit/webhook/" + label)
 		{
 			webhook.POST("", ctrl.ValidateWebhook)
 		}

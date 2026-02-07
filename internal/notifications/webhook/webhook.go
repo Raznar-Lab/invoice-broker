@@ -1,20 +1,20 @@
-package notifications
+package webhook
 
 import (
 	"encoding/json"
 
 	"github.com/rs/zerolog/log"
+	"raznar.id/invoice-broker/internal/jobs"
 	webhook_job "raznar.id/invoice-broker/internal/jobs/webhook"
 )
 
-type WebhookPayload struct {
+type Payload struct {
 	Content any
 	URLS    []string
-	Header  string
-	Token   string
+	Headers map[string]string
 }
 
-func SendWebhook(payload WebhookPayload) error {
+func Send(payload Payload) error {
 	body, err := json.Marshal(payload.Content)
 	if err != nil {
 		log.Debug().
@@ -32,32 +32,23 @@ func SendWebhook(payload WebhookPayload) error {
 	log.Debug().
 		Int("url_count", len(payload.URLS)).
 		Str("content_preview", preview).
-		Str("header", payload.Header).
+		Interface("header", payload.Headers).
 		Msg("Dispatching webhook jobs")
 
 	for i, url := range payload.URLS {
 		log.Debug().
 			Int("index", i).
 			Str("url", url).
-			Str("header", payload.Header).
+			Interface("header", payload.Headers).
 			Msg("Enqueuing webhook job")
 
-		job := webhook_job.New(webhook_job.Payload{
+		job := &webhook_job.WebhookJob{
 			Content: body,
 			URL:     url,
-			Header:  payload.Header,
-			Token:   payload.Token,
-		})
-		ok := job.Enqueue()
-		if ok {
-			log.Info().
-				Str("url", url).
-				Msg("Failed to enqueue webhook job")
-		} else {
-			log.Info().
-				Str("url", url).
-				Msg("Webhook job enqueued successfully")
+			Headers: payload.Headers,
 		}
+		
+		jobs.Enqueue(job)
 	}
 
 	log.Debug().

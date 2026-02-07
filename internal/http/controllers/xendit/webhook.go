@@ -25,7 +25,7 @@ func (x *XenditController) ValidateWebhook(c *gin.Context) {
 		return
 	}
 
-	cbToken := c.GetHeader("x-callback-token")
+	cbToken := c.GetHeader(x.paymentConfig.WebhookHeader)
 
 	log.Debug().
 		Str("callback_token", cbToken).

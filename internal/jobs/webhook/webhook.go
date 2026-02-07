@@ -18,39 +18,19 @@ const (
 )
 
 var activeJobs sync.Map
-
-type Payload struct {
-	Content []byte
-	URL     string
-	Header  string
-	Token   string
-}
-
-func (p Payload) ID() string {
-	h := sha256.New()
-	h.Write([]byte(p.URL))
-	h.Write(p.Content)
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 type WebhookJob struct {
 	ID       string
 	Content  []byte
 	URL      string
-	Header   string
-	Token    string
+	Headers  map[string]string
 	Attempts int
 }
 
-// ---------- constructor ----------
-func New(payload Payload) *WebhookJob {
-	return &WebhookJob{
-		ID:      payload.ID(),
-		Content: payload.Content,
-		URL:     payload.URL,
-		Header:  payload.Header,
-		Token:   payload.Token,
-	}
+func (j *WebhookJob) GenerateId() {
+	h := sha256.New()
+	h.Write([]byte(j.URL))
+	h.Write(j.Content)
+	j.ID = hex.EncodeToString(h.Sum(nil))
 }
 
 // ---------- enqueue ----------
@@ -96,8 +76,8 @@ func (j *WebhookJob) Run(workerID int) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if j.Header != "" && j.Token != "" {
-		req.Header.Set(j.Header, j.Token)
+	for k, v := range j.Headers {
+		req.Header.Set(k, v)
 	}
 
 	client := &http.Client{Timeout: 15 * time.Second}

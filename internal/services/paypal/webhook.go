@@ -4,27 +4,64 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"raznar.id/invoice-broker/configs"
-	"raznar.id/invoice-broker/internal/notifications"
+	"raznar.id/invoice-broker/internal/events"
 )
 
 type WebhookValidationPayload struct {
-	PaymentConfig *configs.GatewayConfig
+	PaymentConfig *configs.PaymentConfig
 	Headers       http.Header
 	RawBody       []byte
 }
 
-func paypalAPI(cfg *configs.GatewayConfig) string {
-	if cfg.Paypal.Sandbox {
+type PaypalWebhookBody struct {
+	ID           string `json:"id"`            // WH-...
+	EventType    string `json:"event_type"`    // PAYMENT.CAPTURE.COMPLETED
+	ResourceType string `json:"resource_type"` // capture
+	Summary      string `json:"summary"`
+
+	Resource struct {
+		ID     string `json:"id"`     // Capture ID (8HW...)
+		Status string `json:"status"` // COMPLETED
+
+		Amount struct {
+			Value        float64 `json:"value,string"`
+			CurrencyCode string  `json:"currency_code"`
+		} `json:"amount"`
+
+		SellerReceivableBreakdown struct {
+			GrossAmount struct {
+				Value        float64 `json:"value,string"`
+				CurrencyCode string  `json:"currency_code"`
+			} `json:"gross_amount"`
+
+			NetAmount struct {
+				Value        float64 `json:"value,string"`
+				CurrencyCode string  `json:"currency_code"`
+			} `json:"net_amount"`
+
+			PaypalFee struct {
+				Value        float64 `json:"value,string"`
+				CurrencyCode string  `json:"currency_code"`
+			} `json:"paypal_fee"`
+		} `json:"seller_receivable_breakdown"`
+	} `json:"resource"`
+}
+
+
+func paypalAPI(cfg *configs.PaymentConfig) string {
+	if cfg.Sandbox {
 		return "https://api-m.sandbox.paypal.com"
 	}
 	return "https://api-m.paypal.com"
 }
 
 func (p *PaypalService) ValidateWebhook(payload WebhookValidationPayload) bool {
-	webhookID := payload.PaymentConfig.Paypal.WebhookToken()
+	paypalConfig := payload.PaymentConfig
+	webhookID := paypalConfig.WebhookToken
 	logger := log.With().
 		Str("service", "paypal_webhook").
 		Logger()
@@ -52,6 +89,12 @@ func (p *PaypalService) ValidateWebhook(payload WebhookValidationPayload) bool {
 		"transmission_time": payload.Headers.Get("PAYPAL-TRANSMISSION-TIME"),
 		"webhook_id":        webhookID,
 		"webhook_event":     json.RawMessage(payload.RawBody),
+	}
+
+	var paypalBody PaypalWebhookBody
+	if err := json.Unmarshal(payload.RawBody, &paypalBody); err != nil {
+		logger.Error().Err(err).Msg("failed to unmarshal paypal body")
+		return false
 	}
 
 	logger.Debug().
@@ -123,20 +166,24 @@ func (p *PaypalService) ValidateWebhook(payload WebhookValidationPayload) bool {
 	logger.Info().
 		Msg("paypal webhook verified successfully")
 
-		// Forward data to the background queue (this is non-blocking now)
-	err = notifications.SendWebhook(
-		notifications.WebhookPayload{
-			Content: body,
-			URLS:    payload.PaymentConfig.Paypal.CallbackURLs,
-			Header:  "",
-			Token:   "",
-		},
-	)
+	event := &events.PaymentWebhookEvent{
+		ID:            paypalBody.Resource.ID, // The actual Transaction ID
+		ExternalID:    paypalBody.ID,          // The Webhook ID
+		Status:        strings.ToLower(paypalBody.Resource.Status),
+		Amount:        paypalBody.Resource.Amount.Value,
+		Currency:      paypalBody.Resource.Amount.CurrencyCode,
+		Gateway:       "Paypal",
+		Description:   paypalBody.Summary,
+		PaymentConfig: paypalConfig,
+		Raw:           payload.RawBody,
+		Fee:           paypalBody.Resource.SellerReceivableBreakdown.PaypalFee.Value,
+	}
+	err = events.Emit(event)
 
 	if err != nil {
 		logger.Error().
 			Err(err).
-			Msg("failed to queue webhook forwarding")
+			Msg("failed to emit event")
 		return false
 	}
 

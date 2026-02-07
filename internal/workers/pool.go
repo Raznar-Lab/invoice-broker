@@ -1,8 +1,9 @@
 package workers
 
 import (
-	"raznar.id/invoice-broker/internal/jobs"
 	"sync"
+
+	"raznar.id/invoice-broker/internal/jobs"
 )
 
 var (
@@ -11,21 +12,21 @@ var (
 )
 
 type Pool struct {
-	queue chan jobs.Job
+	queue chan jobs.JobWorker
 }
 
 // Init initializes the global worker pool once
 func Init(bufferSize int, workerCount int) {
 	once.Do(func() {
 		instance = &Pool{
-			queue: make(chan jobs.Job, bufferSize),
+			queue: make(chan jobs.JobWorker, bufferSize),
 		}
 		instance.start(workerCount)
 	})
 }
 
 // Enqueue provides a global entry point to the pool
-func Enqueue(job jobs.Job) bool {
+func Enqueue(job jobs.JobWorker) bool {
 	if instance == nil {
 		return false
 	}
@@ -42,7 +43,7 @@ func (p *Pool) start(count int) {
 	}
 }
 
-func (p *Pool) enqueue(job jobs.Job) bool {
+func (p *Pool) enqueue(job jobs.JobWorker) bool {
 	select {
 	case p.queue <- job:
 		return true

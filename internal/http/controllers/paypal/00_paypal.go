@@ -7,11 +7,11 @@ import (
 )
 
 type PaypalController struct {
-	paymentConfig *configs.GatewayConfig
+	paymentConfig *configs.PaymentConfig
 	base_controller.BaseController
 }
 
-func New(c *configs.Config, s *services.Services, paymentConfig *configs.GatewayConfig) *PaypalController {
+func New(c *configs.Config, s *services.Services, paymentConfig *configs.PaymentConfig) *PaypalController {
 
 	x := &PaypalController{
 		paymentConfig: paymentConfig,

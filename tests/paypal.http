@@ -1,6 +1,6 @@
 
 ### Create PayPal Order (Sandbox)
-POST http://localhost:3000/api/paypal/store1/order
+POST http://localhost:8080/api/paypal/store1/order
 Content-Type: application/json
 Authorization: Bearer secret_token
 
@@ -14,4 +14,4 @@ Authorization: Bearer secret_token
 }
 
 ### Confirm Paypal Order (Sandbox)
-GET http://localhost:3000/api/paypal/return/store1?token=2EG76217F39768227
+GET http://localhost:8080/api/paypal/return/store1?token=54L6652629053183A&PayerID=EP9JLPQC5FMJQ

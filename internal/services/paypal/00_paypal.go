@@ -9,8 +9,8 @@ type PaypalService struct {
 	base_service.Service
 }
 
-func paypalEndpoint(cfg *configs.GatewayConfig) string {
-	if cfg.Paypal.Sandbox {
+func paypalEndpoint(cfg *configs.PaymentConfig) string {
+	if cfg.Sandbox {
 		return "https://api-m.sandbox.paypal.com"
 	}
 	return "https://api-m.paypal.com"

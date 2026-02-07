@@ -12,7 +12,7 @@ import (
 )
 
 type CreateInvoicePayload struct {
-	PaymentConfig *configs.GatewayConfig
+	PaymentConfig *configs.PaymentConfig
 	ID            string
 	Description   string
 	Amount        float64
@@ -20,14 +20,14 @@ type CreateInvoicePayload struct {
 	CancelURL     string
 }
 
-func (p *PaypalService) getAccessToken(cfg *configs.GatewayConfig) (string, error) {
+func (p *PaypalService) getAccessToken(cfg *configs.PaymentConfig) (string, error) {
 	reqBody := strings.NewReader("grant_type=client_credentials")
 	req, err := http.NewRequest("POST", paypalEndpoint(cfg)+"/v1/oauth2/token", reqBody)
 	if err != nil {
 		return "", err
 	}
 
-	req.SetBasicAuth(cfg.Paypal.ApiID, cfg.Paypal.APIKey)
+	req.SetBasicAuth(cfg.ApiID, cfg.APIKey)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(req)

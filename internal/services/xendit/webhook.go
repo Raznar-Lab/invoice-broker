@@ -1,17 +1,14 @@
 package xendit_service
 
 import (
-	"slices"
-
 	"github.com/rs/zerolog/log"
 	xenInvoice "github.com/xendit/xendit-go/v5/invoice"
 	"raznar.id/invoice-broker/configs"
-	"raznar.id/invoice-broker/internal/constants"
-	"raznar.id/invoice-broker/internal/notifications"
+	"raznar.id/invoice-broker/internal/events"
 )
 
 type ValidationPayload struct {
-	PaymentConfig *configs.GatewayConfig
+	PaymentConfig *configs.PaymentConfig
 	Invoice       *xenInvoice.Invoice
 	CallbackToken string
 }
@@ -23,28 +20,35 @@ func (x *XenditService) ValidateWebhook(payload ValidationPayload) bool {
 		Str("external_id", payload.Invoice.ExternalId).
 		Logger()
 
-	valid := slices.Contains(payload.PaymentConfig.Xendit.WebhookTokens, payload.CallbackToken)
-	if !valid {
+	if payload.PaymentConfig.WebhookToken != payload.CallbackToken {
 		logger.Warn().
 			Str("received_token", payload.CallbackToken).
 			Msg("invalid callback token received")
 		return false
 	}
 
-	// Forward data to the background queue (this is non-blocking now)
-	err := notifications.SendWebhook(
-		notifications.WebhookPayload{
-			Content: payload.Invoice,
-			URLS:    payload.PaymentConfig.Xendit.CallbackURLs,
-			Header:  constants.XENDIT_WEBHOOK_HEADER,
-			Token:   payload.CallbackToken,
-		},
-	)
+	fee := float64(0)
+
+	for _, v := range payload.Invoice.GetFees() {
+		fee += float64(v.GetValue())
+	}
+	err := events.Emit(&events.PaymentWebhookEvent{
+		PaymentConfig: payload.PaymentConfig,
+		Raw:           payload.Invoice,
+		ExternalID:    payload.Invoice.ExternalId,
+		ID:            payload.Invoice.GetId(),
+		Status:        payload.Invoice.Status.String(),
+		Currency:      payload.Invoice.Currency.String(),
+		Description:   payload.Invoice.GetDescription(),
+		Amount:        payload.Invoice.GetAmount(),
+		Fee:           fee,
+		Gateway:       "Xendit",
+	})
 
 	if err != nil {
 		logger.Error().
 			Err(err).
-			Msg("failed to queue webhook forwarding")
+			Msg("failed to emit event")
 		return false
 	}
 

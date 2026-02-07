@@ -83,12 +83,10 @@ func fillPaymentConfig(p *PaymentConfig, field, value string) {
 		// don't log the value, it's sensitive
 		p.APIKey = value
 
-	case "WEBHOOK_TOKENS":
-		p.WebhookTokens = strings.Split(value, ",")
-		log.Debug().
-			Int("count", len(p.WebhookTokens)).
-			Msg("Parsed webhook tokens")
-
+	case "WEBHOOK_HEADER":
+		p.WebhookHeader = value
+	case "WEBHOOK_TOKEN":
+		p.WebhookToken = value
 	case "SANDBOX":
 		v, err := strconv.ParseBool(value)
 		if err != nil {
@@ -104,6 +102,8 @@ func fillPaymentConfig(p *PaymentConfig, field, value string) {
 		log.Debug().
 			Int("count", len(p.CallbackURLs)).
 			Msg("Parsed callback URLs")
+	case "NOTIFICATION_WEBHOOKS":
+		p.Notification.Webhooks = strings.Split(value, ",")
 	}
 
 }

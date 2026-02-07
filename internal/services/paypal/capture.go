@@ -6,7 +6,7 @@ import (
 	"raznar.id/invoice-broker/configs"
 )
 
-func (p *PaypalService) CaptureOrder(cfg *configs.GatewayConfig, orderID string) error {
+func (p *PaypalService) CaptureOrder(cfg *configs.PaymentConfig, orderID string) error {
 	token, err := p.getAccessToken(cfg)
 	if err != nil {
 		return err

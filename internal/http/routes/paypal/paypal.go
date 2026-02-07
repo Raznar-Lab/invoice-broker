@@ -24,7 +24,7 @@ func (r *PaypalRoute) Register() {
 		ctrl := paypal_controller.New(
 			r.Config,
 			r.Services,
-			cfg,
+			&cfg.Paypal,
 		)
 
 		label := strings.ToLower(labelKey)

@@ -7,11 +7,11 @@ import (
 )
 
 type XenditController struct {
-	paymentConfig *configs.GatewayConfig
+	paymentConfig *configs.PaymentConfig
 	base_controller.BaseController
 }
 
-func New(c *configs.Config, s *services.Services, paymentConfig *configs.GatewayConfig) *XenditController {
+func New(c *configs.Config, s *services.Services, paymentConfig *configs.PaymentConfig) *XenditController {
 
 	x := &XenditController{
 		paymentConfig: paymentConfig,

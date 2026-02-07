@@ -11,7 +11,7 @@ import (
 )
 
 type CreateInvoicePayload struct {
-	PaymentConfig   *configs.GatewayConfig // Added PaymentConfig directly
+	PaymentConfig   *configs.PaymentConfig // Added PaymentConfig directly
 	ID              string
 	Description     string
 	Amount          float64
@@ -26,7 +26,7 @@ func (x *XenditService) CreateInvoice(payload CreateInvoicePayload) (*xenInvoice
 		Logger()
 
 	// 2. Initialize Client using the passed config
-	xenClient := xendit.NewClient(payload.PaymentConfig.Xendit.APIKey)
+	xenClient := xendit.NewClient(payload.PaymentConfig.APIKey)
 	
 	// Business Logic: 1% Fee
 	feeAmount := payload.Amount * 0.01
