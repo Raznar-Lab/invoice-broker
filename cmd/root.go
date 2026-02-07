@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -21,40 +22,42 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) { 
+	Run: func(cmd *cobra.Command, args []string) {
 		startServer()
 	},
 }
 
 var (
 	debugMode bool
-	verbose   bool
 )
 
 func initConfig() {
-	// 1. Set the global logging level
+	switch strings.ToLower(os.Getenv("APP_DEBUG")) {
+	case "1", "true", "yes":
+		debugMode = true
+	}
+
+	// Global log level
 	if debugMode {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
-	// Setup zerolog console formatting
+
+	// Time format
 	zerolog.TimeFieldFormat = time.RFC3339
 
-	// Console writer
-	consoleWriter := zerolog.ConsoleWriter{
+	// Console logger
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{
 		Out:        os.Stderr,
 		TimeFormat: time.RFC3339,
-	}
-
-	// Set global logger
-	log.Logger = zerolog.New(consoleWriter).With().Timestamp().Logger()
+	}).With().Timestamp().Logger()
 }
+
 
 func init() {
 	// Persistent flags are available to all subcommands (like 'start')
 	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "Enable debug logging")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable human-readable console output")
 
 	// This ensures config/logging is set up before any command runs
 	cobra.OnInitialize(initConfig)

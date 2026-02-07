@@ -8,8 +8,8 @@ import (
 	"raznar.id/invoice-broker/internal/services"
 )
 
-func Start(conf *configs.Config, s *services.Services) error {
-	if !gin.IsDebugging() {
+func Start(debugMode bool, conf *configs.Config, s *services.Services) error {
+	if !debugMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -18,6 +18,11 @@ func Start(conf *configs.Config, s *services.Services) error {
 	// Initialize Routes from the separate register function
 	routes.Init(r, conf, s)
 
-	log.Info().Str("bind", conf.Server.Bind).Str("port", conf.Server.Port).Msg("REST API is live")
+
+	log.Info().
+		Str("bind", conf.Server.Bind).
+		Str("port", conf.Server.Port).
+		Bool("debug", debugMode).
+		Msg("REST API is live")
 	return r.Run(":" + conf.Server.Port)
 }

@@ -26,7 +26,7 @@ func startServer() {
 		Msg("Starting Invoice Broker server...")
 
 	s := services.New(conf)
-	if err = app.Start(conf, s); err != nil {
+	if err = app.Start(debugMode, conf, s); err != nil {
 		log.Fatal().Err(err).Msg("An error occurred when starting the service")
 	}
 }
