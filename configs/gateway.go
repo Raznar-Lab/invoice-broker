@@ -1,8 +1,9 @@
 package configs
 
 type GatewayConfig struct {
-	Xendit PaymentConfig `json:"xendit"`
-	Paypal PaymentConfig `json:"paypal"`
+	Xendit  PaymentConfig `json:"xendit"`
+	Paypal  PaymentConfig `json:"paypal"`
+	Pakasir PaymentConfig `json:"pakasir"`
 }
 
 type NotificationConfig struct {
@@ -11,6 +12,7 @@ type NotificationConfig struct {
 type PaymentConfig struct {
 	ApiID         string             `json:"api_ID"`
 	APIKey        string             `json:"api_key"`
+	Project       string             `json:"project"`
 	WebhookToken  string             `json:"webhook_token"`
 	WebhookHeader string             `json:"webhook_header"`
 	CallbackURLs  []string           `json:"callback_urls"`

@@ -58,6 +58,10 @@ func (p *PaymentWebhookEvent) sendWebhooks() error {
 			statusEmoji = "❌"
 		}
 
+		if p.Gateway == "Pakasir" {
+			color = 0xe46455
+		}
+
 		embed := map[string]any{
 			"title":       fmt.Sprintf("💳 %s", p.ExternalID),
 			"description": fmt.Sprintf("**%s**", p.Description),
@@ -131,13 +135,17 @@ func (p *PaymentWebhookEvent) sendCallbacks() error {
 	urls := p.PaymentConfig.CallbackURLs
 
 	log.Debug().Strs("urls", urls).Msg("Sending callbacks")
+
+	headers := map[string]string{}
+	if p.PaymentConfig.WebhookHeader != "" {
+		headers[p.PaymentConfig.WebhookHeader] = p.PaymentConfig.WebhookToken
+	}
+
 	return webhook.Send(
 		webhook.Payload{
 			Content: p.Raw,
 			URLS:    urls,
-			Headers: map[string]string{
-				p.PaymentConfig.WebhookHeader: p.PaymentConfig.WebhookToken,
-			},
+			Headers: headers,
 		},
 	)
 

@@ -56,6 +56,8 @@ func New() (*Config, error) {
 				fillPaymentConfig(&gc.Xendit, field, value)
 			case "paypal":
 				fillPaymentConfig(&gc.Paypal, field, value)
+			case "pakasir":
+				fillPaymentConfig(&gc.Pakasir, field, value)
 			}
 
 			config.Gateway[label] = gc
@@ -82,6 +84,9 @@ func fillPaymentConfig(p *PaymentConfig, field, value string) {
 	case "API_KEY":
 		// don't log the value, it's sensitive
 		p.APIKey = value
+
+	case "PROJECT":
+		p.Project = value
 
 	case "WEBHOOK_HEADER":
 		p.WebhookHeader = value

@@ -5,6 +5,7 @@ import (
 	"raznar.id/invoice-broker/configs"
 	"raznar.id/invoice-broker/internal/http/middlewares"
 	paypal_route "raznar.id/invoice-broker/internal/http/routes/paypal"
+	pakasir_route "raznar.id/invoice-broker/internal/http/routes/pakasir"
 	xendit_route "raznar.id/invoice-broker/internal/http/routes/xendit"
 	"raznar.id/invoice-broker/internal/services"
 )
@@ -21,7 +22,9 @@ func Init(r *gin.Engine, conf *configs.Config, s *services.Services) {
 	// Initialize the Xendit Sub-Router
 	xenditRouter := xendit_route.New(conf, s, mw, api)
 	paypalRouter := paypal_route.New(conf, s, mw, api)
+	pakasirRouter := pakasir_route.New(conf, s, mw, api)
 	xenditRouter.Register()
 	paypalRouter.Register()
+	pakasirRouter.Register()
 
 }
