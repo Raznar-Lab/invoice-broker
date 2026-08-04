@@ -3,6 +3,7 @@ package pakasir_service
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -129,7 +130,8 @@ func (p *PakasirService) transactionDetail(cfg *configs.PaymentConfig, orderID s
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("pakasir transactiondetail returned status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("pakasir transactiondetail returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var detail transactionDetailResponse
